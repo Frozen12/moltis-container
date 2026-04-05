@@ -8,15 +8,12 @@ ENV NODE_ENV=production \
     NPM_CONFIG_PREFIX=/data/global \
     UV_CACHE_DIR=/data/uv/cache \
     UV_TOOL_DIR=/data/uv/tools \
-    PATH="/data/pnpm:/data/global/bin:/data/uv/tools:/home/moltis/.local/bin:/usr/local/bin:$PATH" \
+    PATH="/data/pnpm:/data/global/bin:/data/uv/tools:/root/.local/bin:/usr/local/bin:$PATH" \
     MOLTIS_PASSWORD=admin \
     MOLTIS_DATA_DIR=/data/moltis \
     MOLTIS_CONFIG_DIR=/data/moltis/config \
     MOLTIS_NO_TLS=true \
     MOLTIS_DEPLOY_PLATFORM=cloud
-
-# Create non-root user
-RUN useradd -m -u 10001 -s /bin/bash moltis
 
 RUN set -eux; \
     apt-get update; \
@@ -26,8 +23,7 @@ RUN set -eux; \
         curl \
         git \
         ca-certificates \
-        tini \
-        gosu; \
+        tini; \
     \
     # Create persistent dirs
     mkdir -p /data/pnpm /data/global /data/global/bin /data/uv/cache /data/uv/tools; \
@@ -35,18 +31,22 @@ RUN set -eux; \
     # Install uv
     curl -Ls https://astral.sh/uv/install.sh | sh; \
     \
-    # Enable pnpm
+    # Enable corepack + pnpm
     corepack enable; \
     corepack prepare pnpm@latest --activate; \
     \
-    # Proper pnpm global config
+    # Ensure pnpm is available system-wide
+    corepack use pnpm@latest; \
+    \
+    # Configure pnpm global paths
     pnpm config set global-dir /data/global; \
     pnpm config set global-bin-dir /data/global/bin; \
     \
     # Install node deps
     pnpm add -g better-sqlite3 @tobilu/qmd; \
     \
-    # (Optional debug — remove later)
+    # Verify (optional, remove later)
+    pnpm -v; \
     ls -la /data/global/bin; \
     \
     # Install Moltis
@@ -59,7 +59,6 @@ RUN set -eux; \
     # Cleanup
     rm -rf /var/lib/apt/lists/* /root/.cache /tmp/*
 
-# Init script
 COPY init.sh /init.sh
 RUN chmod +x /init.sh
 
