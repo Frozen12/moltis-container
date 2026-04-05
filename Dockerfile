@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 FROM node:lts-alpine
 
 # Core environment
@@ -13,11 +15,11 @@ ENV NODE_ENV=production \
     MOLTIS_NO_TLS=true \
     MOLTIS_DEPLOY_PLATFORM=vultr \
     \
-    # 🔥 pnpm fixes (CRITICAL)
+    # 🔥 pnpm critical fixes
     PNPM_IGNORE_SCRIPTS=false \
     PNPM_ENABLE_PRE_POST_SCRIPTS=true
 
-# Install runtime + build deps
+# Install deps
 RUN apk add --no-cache \
     python3 \
     py3-pip \
@@ -33,7 +35,7 @@ RUN apk add --no-cache \
     python3-dev \
     build-base
 
-# Create persistent structure
+# Create persistent dirs
 RUN mkdir -p /data/pnpm /data/global /data/venv /data/config \
     && chmod -R 777 /data
 
@@ -43,31 +45,33 @@ RUN python3 -m venv /data/venv
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Ensure pnpm allows native builds
+# Ensure scripts allowed
 RUN pnpm config set ignore-scripts false \
     && pnpm config set enable-pre-post-scripts true
 
 # Install Moltis
 RUN curl -fsSL https://www.moltis.org/install.sh | sh
 
-# Install qmd
-RUN pnpm add -g @tobilu/qmd
+# 🔥 Install better-sqlite3 with CACHE + prebuilt support
+RUN --mount=type=cache,target=/root/.pnpm-store \
+    pnpm add -g better-sqlite3@12.8.0
 
-# Remove build dependencies (reduce image size)
+# Install qmd (uses cached deps if needed)
+RUN --mount=type=cache,target=/root/.pnpm-store \
+    pnpm add -g @tobilu/qmd
+
+# Remove build deps (after native compiled)
 RUN apk del .build-deps
 
-# Cleanup cache
+# Cleanup
 RUN rm -rf /root/.cache /tmp/*
 
-# Working directory
 WORKDIR /data
-
-# Volume
 VOLUME ["/data"]
 
-# Expose port
 EXPOSE 13131
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:13131 || exit 1
 
-# Start Moltis
 CMD ["sh", "-c", "moltis --bind 0.0.0.0 --port ${PORT:-13131}"]
