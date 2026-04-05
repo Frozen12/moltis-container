@@ -1,69 +1,72 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:lts-alpine
+############################
+# 🏗️ Stage 1 — Builder
+############################
+FROM node:lts-slim AS builder
 
-# Core environment
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-venv \
+    python3-pip \
+    build-essential \
+    curl \
+    git \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PNPM_HOME=/data/pnpm \
+    NPM_CONFIG_PREFIX=/data/global \
+    PATH="/data/pnpm:/data/global/bin:/data/venv/bin:/usr/local/bin:$PATH"
+
+RUN mkdir -p /data/pnpm /data/global /data/venv
+RUN python3 -m venv /data/venv
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+RUN pnpm add -g better-sqlite3 @tobilu/qmd
+
+
+############################
+# 🚀 Stage 2 — Runtime
+############################
+FROM node:lts-slim
+
 ENV NODE_ENV=production \
     APP_DATA=/data \
     PNPM_HOME=/data/pnpm \
     NPM_CONFIG_PREFIX=/data/global \
-    PATH="/data/pnpm:/data/global/bin:/data/venv/bin:/root/.local/bin:/usr/local/bin:$PATH" \
+    PATH="/data/pnpm:/data/global/bin:/data/venv/bin:/usr/local/bin:$PATH" \
     \
     MOLTIS_PASSWORD=admin \
     MOLTIS_DATA_DIR=/data \
     MOLTIS_CONFIG_DIR=/data/config \
     MOLTIS_NO_TLS=true \
-    MOLTIS_DEPLOY_PLATFORM=vultr \
-    \
-    # 🔥 pnpm critical fixes
-    PNPM_IGNORE_SCRIPTS=false \
-    PNPM_ENABLE_PRE_POST_SCRIPTS=true
+    MOLTIS_DEPLOY_PLATFORM=cloud
 
-# Install deps
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     python3 \
-    py3-pip \
-    git \
+    python3-venv \
+    sqlite3 \
     curl \
-    bash \
-    sqlite \
-    libstdc++ \
-    libgcc \
     ca-certificates \
-    && apk add --no-cache --virtual .build-deps \
-    python3-dev \
-    build-base
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create persistent dirs
-RUN mkdir -p /data/pnpm /data/global /data/venv /data/config \
-    && chmod -R 777 /data
+RUN set -eux; \
+    curl -LO https://github.com/moltis-org/moltis/releases/latest/download/moltis_amd64.deb; \
+    apt-get update; \
+    apt-get install -y ./moltis_amd64.deb; \
+    rm -f moltis_amd64.deb; \
+    rm -rf /var/lib/apt/lists/*
 
-# Python venv
-RUN python3 -m venv /data/venv
+COPY --from=builder /data /data
 
-# Enable pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# Ensure scripts allowed
-RUN pnpm config set ignore-scripts false \
-    && pnpm config set enable-pre-post-scripts true
-
-# Install Moltis
-RUN curl -fsSL https://www.moltis.org/install.sh | sh
-
-# Install better-sqlite3 and qmd
-RUN pnpm add -g better-sqlite3 @tobilu/qmd
-
-
-# Remove build deps (after native compiled)
-RUN apk del .build-deps
-
-# Cleanup
-RUN rm -rf /root/.cache /tmp/*
+RUN mkdir -p /data/config && chmod -R 777 /data
 
 WORKDIR /data
 VOLUME ["/data"]
 
 EXPOSE 13131
 
-CMD ["sh", "-c", "moltis --bind 0.0.0.0 --port ${PORT:-13131}"]
+CMD sh -c "moltis --bind 0.0.0.0 --port ${PORT:-13131}"
