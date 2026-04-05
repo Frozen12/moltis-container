@@ -29,7 +29,8 @@ RUN set -eux; \
         tini \
         gosu; \
     \
-    mkdir -p /data/pnpm /data/global /data/uv/cache /data/uv/tools; \
+    # Create persistent dirs
+    mkdir -p /data/pnpm /data/global /data/global/bin /data/uv/cache /data/uv/tools; \
     \
     # Install uv
     curl -Ls https://astral.sh/uv/install.sh | sh; \
@@ -37,10 +38,16 @@ RUN set -eux; \
     # Enable pnpm
     corepack enable; \
     corepack prepare pnpm@latest --activate; \
+    \
+    # Proper pnpm global config
+    pnpm config set global-dir /data/global; \
     pnpm config set global-bin-dir /data/global/bin; \
     \
     # Install node deps
     pnpm add -g better-sqlite3 @tobilu/qmd; \
+    \
+    # (Optional debug — remove later)
+    ls -la /data/global/bin; \
     \
     # Install Moltis
     TAG=$(curl -fsSL https://api.github.com/repos/moltis-org/moltis/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/'); \
@@ -49,6 +56,7 @@ RUN set -eux; \
     dpkg -i moltis.deb || apt-get -f install -y; \
     rm -f moltis.deb; \
     \
+    # Cleanup
     rm -rf /var/lib/apt/lists/* /root/.cache /tmp/*
 
 # Init script
