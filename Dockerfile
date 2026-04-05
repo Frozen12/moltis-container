@@ -15,8 +15,8 @@ ENV NODE_ENV=production \
     MOLTIS_NO_TLS=true \
     MOLTIS_DEPLOY_PLATFORM=cloud
 
-# Non-root user
-# RUN useradd -m -u 10001 -s /bin/bash moltis
+# Create non-root user
+RUN useradd -m -u 10001 -s /bin/bash moltis
 
 RUN set -eux; \
     apt-get update; \
@@ -28,7 +28,6 @@ RUN set -eux; \
         ca-certificates \
         tini; \
     \
-    # Create persistent dirs
     mkdir -p /data/pnpm /data/global /data/uv/cache /data/uv/tools; \
     \
     # Install uv
@@ -42,14 +41,13 @@ RUN set -eux; \
     # Install node deps
     pnpm add -g better-sqlite3 @tobilu/qmd; \
     \
-    # Install Moltis (prebuilt)
+    # Install Moltis
     TAG=$(curl -fsSL https://api.github.com/repos/moltis-org/moltis/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/'); \
     VERSION=${TAG#v}; \
     curl -fL "https://github.com/moltis-org/moltis/releases/download/${TAG}/moltis_${VERSION}_amd64.deb" -o moltis.deb; \
     dpkg -i moltis.deb || apt-get -f install -y; \
     rm -f moltis.deb; \
     \
-    # Cleanup
     rm -rf /var/lib/apt/lists/* /root/.cache /tmp/*
 
 # Init script
@@ -58,8 +56,6 @@ RUN chmod +x /init.sh
 
 WORKDIR /data
 VOLUME ["/data"]
-
-USER moltis
 
 EXPOSE 13131
 
