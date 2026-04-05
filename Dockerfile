@@ -16,7 +16,7 @@ ENV NODE_ENV=production \
     MOLTIS_DEPLOY_PLATFORM=cloud
 
 # Non-root user
-RUN useradd -m -u 10001 -s /bin/bash moltis
+# RUN useradd -m -u 10001 -s /bin/bash moltis
 
 RUN set -eux; \
     apt-get update; \
