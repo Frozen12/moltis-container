@@ -22,11 +22,16 @@ RUN set -eux; \
     # Install uv
     curl -Ls https://astral.sh/uv/install.sh | sh; \
     \
-    # Enable Corepack and activate pnpm
+    # Enable corepack + pnpm
     corepack enable; \
     corepack prepare pnpm@latest --activate; \
     \
-    # Install base tools (system layer only)
+    # Temporary build-time pnpm setup (safe)
+    export PNPM_HOME=/usr/local/pnpm; \
+    mkdir -p /usr/local/pnpm; \
+    pnpm config set global-bin-dir /usr/local/bin; \
+    \
+    # Install base tools (system layer)
     pnpm add -g @tobilu/qmd better-sqlite3; \
     \
     # Install Moltis
@@ -36,6 +41,7 @@ RUN set -eux; \
     dpkg -i moltis.deb || apt-get -f install -y; \
     rm -f moltis.deb; \
     \
+    # Cleanup
     rm -rf /var/lib/apt/lists/* /root/.cache /tmp/*
 
 COPY init.sh /init.sh
