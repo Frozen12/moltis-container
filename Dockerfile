@@ -52,13 +52,9 @@ RUN pnpm config set ignore-scripts false \
 # Install Moltis
 RUN curl -fsSL https://www.moltis.org/install.sh | sh
 
-# 🔥 Install better-sqlite3 with CACHE + prebuilt support
-RUN --mount=type=cache,target=/root/.pnpm-store \
-    pnpm add -g better-sqlite3@12.8.0
+# Install better-sqlite3 and qmd
+RUN pnpm add -g better-sqlite3 @tobilu/qmd
 
-# Install qmd (uses cached deps if needed)
-RUN --mount=type=cache,target=/root/.pnpm-store \
-    pnpm add -g @tobilu/qmd
 
 # Remove build deps (after native compiled)
 RUN apk del .build-deps
