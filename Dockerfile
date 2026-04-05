@@ -53,12 +53,15 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Moltis (.deb, dynamic version-safe)
 RUN set -eux; \
-    curl -LO https://github.com/moltis-org/moltis/releases/latest/download/moltis_amd64.deb; \
-    apt-get update; \
-    apt-get install -y ./moltis_amd64.deb; \
-    rm -f moltis_amd64.deb; \
-    rm -rf /var/lib/apt/lists/*
+    TAG=$(curl -fsSL https://api.github.com/repos/moltis-org/moltis/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/'); \
+    VERSION=$(echo "$TAG" | sed 's/^v//'); \
+    URL="https://github.com/moltis-org/moltis/releases/download/${TAG}/moltis_${VERSION}_amd64.deb"; \
+    \
+    curl -fL "$URL" -o moltis.deb; \
+    dpkg -i moltis.deb || apt-get -f install -y; \
+    rm -f moltis.deb
 
 COPY --from=builder /data /data
 
