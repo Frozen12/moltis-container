@@ -1,14 +1,14 @@
 #!/bin/sh
 set -e
 
-# Fix permissions (for mounted volumes)
+# Fix volume permissions
 chown -R moltis:moltis /data 2>/dev/null || true
 
-# Ensure required directories exist
+# Ensure required dirs
 mkdir -p /data/moltis/config
 
-# Start qmd in background
+# Start qmd
 qmd &
 
-# Start moltis (main process)
+# Start main service
 exec moltis --bind 0.0.0.0 --port ${PORT:-13131}
