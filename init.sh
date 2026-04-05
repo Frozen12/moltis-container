@@ -24,7 +24,7 @@ pnpm config set store-dir /data/pnpm/store
 pnpm config set cache-dir /data/pnpm/store
 
 # Start qmd
-qmd &
+# qmd &
 
 # Start Moltis
 exec moltis --bind 0.0.0.0 --port ${PORT:-13131}
