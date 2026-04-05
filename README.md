@@ -36,7 +36,7 @@ docker run -d \
 * 🧠 Uses `better-sqlite3` for fast local database access
 * 🔁 Persistent data via `/data` volume
 * 🚫 TLS disabled (intended for external handling if needed)
-* 🐧 Alpine-based minimal image
+* 🐧 debian-based minimal image
 
 ---
 
@@ -85,7 +85,7 @@ docker run -d \
 
 ## 🧠 Installed Components
 
-* Node.js (LTS, Alpine)
+* Node.js (LTS, debian)
 * pnpm (via corepack)
 * Python (venv at `/data/venv`)
 * Moltis
