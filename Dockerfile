@@ -26,7 +26,8 @@ RUN set -eux; \
         curl \
         git \
         ca-certificates \
-        tini; \
+        tini \
+        gosu; \
     \
     mkdir -p /data/pnpm /data/global /data/uv/cache /data/uv/tools; \
     \
