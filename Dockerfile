@@ -67,7 +67,4 @@ VOLUME ["/data"]
 
 EXPOSE 13131
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- http://localhost:13131 || exit 1
-
 CMD ["sh", "-c", "moltis --bind 0.0.0.0 --port ${PORT:-13131}"]
