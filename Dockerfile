@@ -14,7 +14,7 @@ ENV NODE_ENV=production \
     MOLTIS_NO_TLS=true \
     MOLTIS_DEPLOY_PLATFORM=vultr
 
-# Install dependencies
+# Install dependencies (added sqlite)
 RUN apk add --no-cache \
     python3 \
     py3-pip \
@@ -22,7 +22,8 @@ RUN apk add --no-cache \
     build-base \
     git \
     curl \
-    bash
+    bash \
+    sqlite
 
 # Create persistent structure + fix permissions
 RUN mkdir -p /data/pnpm /data/global /data/venv /data/config \
@@ -34,11 +35,14 @@ RUN python3 -m venv /data/venv
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# 🔥 Install Moltis via official script
+# 🔥 VERY IMPORTANT: allow native builds
+RUN pnpm config set ignore-scripts false
+
+# Install Moltis
 RUN curl -fsSL https://www.moltis.org/install.sh | sh
 
-# Install qmd globally (persistent)
-RUN pnpm add -g @tobilu/qmd
+# Install qmd + rebuild native modules
+RUN pnpm add -g @tobilu/qmd && pnpm rebuild -g
 
 # Working directory
 WORKDIR /data
