@@ -13,33 +13,23 @@ ENV NODE_ENV=production \
     MOLTIS_DATA_DIR=/data/moltis \
     MOLTIS_CONFIG_DIR=/data/moltis/config \
     MOLTIS_NO_TLS=true \
-    MOLTIS_DEPLOY_PLATFORM=cloud \
-    PNPM_IGNORE_SCRIPTS=false \
-    PNPM_ENABLE_PRE_POST_SCRIPTS=true
+    MOLTIS_DEPLOY_PLATFORM=cloud
 
-# Create non-root user
+# Non-root user
 RUN useradd -m -u 10001 -s /bin/bash moltis
 
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         python3 \
-        build-essential \
         sqlite3 \
         curl \
         git \
         ca-certificates \
         tini; \
     \
-    # Create persistent directories
-    mkdir -p \
-        /data/pnpm \
-        /data/global \
-        /data/config \
-        /data/uv/cache \
-        /data/uv/tools; \
-    \
-    chown -R moltis:moltis /data; \
+    # Create persistent dirs
+    mkdir -p /data/pnpm /data/global /data/uv/cache /data/uv/tools; \
     \
     # Install uv
     curl -Ls https://astral.sh/uv/install.sh | sh; \
@@ -47,23 +37,24 @@ RUN set -eux; \
     # Enable pnpm
     corepack enable; \
     corepack prepare pnpm@latest --activate; \
+    pnpm config set global-bin-dir /data/global/bin; \
     \
-    # Install global node deps
+    # Install node deps
     pnpm add -g better-sqlite3 @tobilu/qmd; \
     \
-    # Install Moltis
+    # Install Moltis (prebuilt)
     TAG=$(curl -fsSL https://api.github.com/repos/moltis-org/moltis/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/'); \
-    VERSION=$(echo "$TAG" | sed 's/^v//'); \
-    URL="https://github.com/moltis-org/moltis/releases/download/${TAG}/moltis_${VERSION}_amd64.deb"; \
-    \
-    curl -fL "$URL" -o moltis.deb; \
+    VERSION=${TAG#v}; \
+    curl -fL "https://github.com/moltis-org/moltis/releases/download/${TAG}/moltis_${VERSION}_amd64.deb" -o moltis.deb; \
     dpkg -i moltis.deb || apt-get -f install -y; \
     rm -f moltis.deb; \
     \
     # Cleanup
-    apt-get remove -y build-essential; \
-    apt-get autoremove -y; \
     rm -rf /var/lib/apt/lists/* /root/.cache /tmp/*
+
+# Init script
+COPY init.sh /init.sh
+RUN chmod +x /init.sh
 
 WORKDIR /data
 VOLUME ["/data"]
@@ -72,8 +63,5 @@ USER moltis
 
 EXPOSE 13131
 
-# Proper init system
 ENTRYPOINT ["tini", "--"]
-
-# Run qmd as managed background + moltis as main
-CMD ["sh", "-c", "qmd & exec moltis --bind 0.0.0.0 --port ${PORT:-13131}"]
+CMD ["/init.sh"]
