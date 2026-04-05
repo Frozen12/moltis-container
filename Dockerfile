@@ -12,9 +12,12 @@ ENV NODE_ENV=production \
     MOLTIS_DATA_DIR=/data \
     MOLTIS_CONFIG_DIR=/data/config \
     MOLTIS_NO_TLS=true \
-    MOLTIS_DEPLOY_PLATFORM=vultr
+    MOLTIS_DEPLOY_PLATFORM=vultr \
+    \
+    # 🔥 CRITICAL: allow native builds in pnpm v10
+    PNPM_IGNORE_SCRIPTS=false
 
-# Install dependencies (added sqlite)
+# Install dependencies
 RUN apk add --no-cache \
     python3 \
     py3-pip \
@@ -35,14 +38,16 @@ RUN python3 -m venv /data/venv
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# 🔥 VERY IMPORTANT: allow native builds
-RUN pnpm config set ignore-scripts false
+# Extra safety (pnpm config)
+RUN pnpm config set ignore-scripts false \
+    && pnpm config set enable-pre-post-scripts true
 
 # Install Moltis
 RUN curl -fsSL https://www.moltis.org/install.sh | sh
 
-# Install qmd + rebuild native modules
-RUN pnpm add -g @tobilu/qmd && pnpm rebuild -g
+# Install qmd (FIXED)
+RUN pnpm add -g @tobilu/qmd \
+    && pnpm rebuild
 
 # Working directory
 WORKDIR /data
