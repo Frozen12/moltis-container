@@ -13,10 +13,11 @@ ENV NODE_ENV=production \
     MOLTIS_NO_TLS=true \
     MOLTIS_DEPLOY_PLATFORM=vultr \
     \
-    # 🔥 pnpm fix
-    PNPM_IGNORE_SCRIPTS=false
+    # 🔥 pnpm fixes (CRITICAL)
+    PNPM_IGNORE_SCRIPTS=false \
+    PNPM_ENABLE_PRE_POST_SCRIPTS=true
 
-# Install runtime + build deps (split for cleanup)
+# Install runtime + build deps
 RUN apk add --no-cache \
     python3 \
     py3-pip \
@@ -42,20 +43,20 @@ RUN python3 -m venv /data/venv
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Allow native builds
+# Ensure pnpm allows native builds
 RUN pnpm config set ignore-scripts false \
     && pnpm config set enable-pre-post-scripts true
 
 # Install Moltis
 RUN curl -fsSL https://www.moltis.org/install.sh | sh
 
-# Install qmd + build native modules
-RUN pnpm add -g @tobilu/qmd && pnpm rebuild
+# Install qmd
+RUN pnpm add -g @tobilu/qmd
 
-# 🔥 Remove build dependencies (size reduction)
+# Remove build dependencies (reduce image size)
 RUN apk del .build-deps
 
-# Clean cache
+# Cleanup cache
 RUN rm -rf /root/.cache /tmp/*
 
 # Working directory
@@ -69,4 +70,4 @@ EXPOSE 13131
 
 
 # Start Moltis
-CMD ["moltis", "--bind", "0.0.0.0", "--port", "13131"]
+CMD ["sh", "-c", "moltis --bind 0.0.0.0 --port ${PORT:-13131}"]
