@@ -34,13 +34,6 @@ RUN set -eux; \
     # Install base tools (system layer)
     pnpm add -g @tobilu/qmd better-sqlite3; \
     \
-    # Install Moltis
-    TAG=$(curl -fsSL https://api.github.com/repos/moltis-org/moltis/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/'); \
-    VERSION=${TAG#v}; \
-    curl -fL "https://github.com/moltis-org/moltis/releases/download/${TAG}/moltis_${VERSION}_amd64.deb" -o moltis.deb; \
-    dpkg -i moltis.deb || apt-get -f install -y; \
-    rm -f moltis.deb; \
-    \
     # Cleanup
     rm -rf /var/lib/apt/lists/* /root/.cache /tmp/*
 
