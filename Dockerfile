@@ -16,6 +16,7 @@ RUN set -eux; \
         sqlite3 \
         curl \
         git \
+        tmux \
         ca-certificates \
         tini; \
     \
