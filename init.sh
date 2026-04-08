@@ -25,7 +25,7 @@ pnpm config set cache-dir /data/pnpm/store
 
 # pnpm setup
 pnpm setup
-source /root/.bashrc
+. /root/.bashrc
 # Start qmd
 # qmd &
 
