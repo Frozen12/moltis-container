@@ -7,7 +7,7 @@ export PNPM_STORE_DIR=/data/pnpm/store
 export UV_CACHE_DIR=/data/uv/cache
 export UV_TOOL_DIR=/data/uv/tools
 export PATH="/data/pnpm:/data/uv/tools:/usr/local/bin:$PATH"
-
+export SHELL=/bin/bash
 # Ensure dirs exist
 mkdir -p \
   /data/pnpm \
