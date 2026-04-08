@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 FROM node:lts-slim
- 
+
 ENV NODE_ENV=production \
     APP_DATA=/data \
     MOLTIS_PASSWORD=admin \
