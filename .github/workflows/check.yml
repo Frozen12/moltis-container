@@ -11,46 +11,49 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       needs_build: ${{ steps.check.outputs.needs_build }}
-      old_sha: ${{ steps.check.outputs.old_sha }}
-      new_sha: ${{ steps.check.outputs.new_sha }}
+      old_digest: ${{ steps.check.outputs.old_digest }}
+      new_digest: ${{ steps.check.outputs.new_digest }}
     steps:
-      - name: Checkout repo (workflows only for SHA check)
-        uses: actions/checkout@v6
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
-          sparse-checkout: |
-            .github/workflows/check.yml
-            .github/workflows/build.yml
-          sparse-checkout-cone-mode: false
+          fetch-depth: 0
 
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Check upstream moltis version
+      - name: Check upstream ghcr.io version
         id: check
         run: |
           set -euo pipefail
 
-          NEW_SHA=$(curl -s "https://api.github.com/repos/moltis-org/moltis/commits/main" \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            | jq -r '.sha')
+          # Get current digest from GHCR
+          NEW_DIGEST=$(curl -s "https://ghcr.io/v2/moltis-org/moltis/manifests/latest" \
+            -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+            | jq -r '.config.digest' 2>/dev/null || echo "")
 
-          echo "New upstream SHA: $NEW_SHA"
+          if [ -z "$NEW_DIGEST" ]; then
+            echo "Failed to fetch GHCR manifest, skipping..."
+            echo "needs_build=false" >> $GITHUB_OUTPUT
+            echo "new_digest=" >> $GITHUB_OUTPUT
+            echo "old_digest=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
-          # Read cached SHA from last rebuild commit message
-          OLD_SHA=$(git log --oneline -1 --format="%B" 2>/dev/null \
-            | grep "^upstream_sha:" | cut -d: -f2 | tr -d ' ' || echo "")
+          echo "New GHCR digest: $NEW_DIGEST"
 
-          echo "Old cached SHA: $OLD_SHA"
-          echo "new_sha=$NEW_SHA" >> $GITHUB_OUTPUT
-          echo "old_sha=$OLD_SHA" >> $GITHUB_OUTPUT
+          # Read cached digest from git history
+          OLD_DIGEST=$(git log --all --oneline --grep="upstream_digest:" -1 2>/dev/null \
+            | grep -oP "upstream_digest:\s*\K[a-f0-9]+" || echo "")
 
-          if [ "$OLD_SHA" = "$NEW_SHA" ] || [ -z "$NEW_SHA" ]; then
+          echo "Old cached digest: $OLD_DIGEST"
+
+          echo "new_digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
+          echo "old_digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
+
+          if [ "$OLD_DIGEST" = "$NEW_DIGEST" ] || [ -z "$OLD_DIGEST" ]; then
             echo "needs_build=false" >> $GITHUB_OUTPUT
             echo "No new version detected."
           else
             echo "needs_build=true" >> $GITHUB_OUTPUT
-            echo "New version detected: $OLD_SHA -> $NEW_SHA"
+            echo "New version detected: $OLD_DIGEST -> $NEW_DIGEST"
           fi
 
   build:
@@ -58,8 +61,8 @@ jobs:
     if: needs.check-upstream.outputs.needs_build == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo (full clone — needed for Docker build context + init.sh)
-        uses: actions/checkout@v6
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -77,14 +80,14 @@ jobs:
           push: true
           tags: |
             meshpotato/moltis:latest
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Tag rebuild commit with upstream SHA
+      - name: Tag commit with upstream digest
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git commit --allow-empty -m "ci: rebuild for upstream ${{ needs.check-upstream.outputs.new_sha }}
-upstream_sha: ${{ needs.check-upstream.outputs.new_sha }}"
+          git commit --allow-empty -m "ci: rebuild for upstream digest ${{ needs.check-upstream.outputs.new_digest }}
+upstream_digest: ${{ needs.check-upstream.outputs.new_digest }}"
           git push
