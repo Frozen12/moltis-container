@@ -1,4 +1,4 @@
-name: Check & Build Moltis
+name: Check New Moltis Version
 
 on:
   schedule:
@@ -59,7 +59,7 @@ jobs:
             echo "New version detected: $OLD_DIGEST → $NEW_DIGEST"
           fi
 
-  build:
+  notify:
     needs: check-upstream
     if: needs.check-upstream.outputs.needs_build == 'true'
     runs-on: ubuntu-latest
