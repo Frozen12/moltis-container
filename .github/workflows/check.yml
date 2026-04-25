@@ -1,4 +1,4 @@
-name: Check New Version
+name: Check & Build Moltis
 
 on:
   schedule:
@@ -6,6 +6,9 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [check-upstream]
+
+permissions:
+  contents: write
 
 jobs:
   check-upstream:
@@ -16,16 +19,13 @@ jobs:
       old_digest: ${{ steps.check.outputs.old_digest }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v6
 
       - name: Check upstream ghcr.io version
         id: check
         run: |
           set -euo pipefail
 
-          # Fetch the image manifest list to get architecture-agnostic digest
           NEW_DIGEST=$(curl -sL "https://ghcr.io/v2/moltis-org/moltis/manifests/latest" \
             -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
             -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
@@ -41,7 +41,6 @@ jobs:
 
           echo "New upstream digest: $NEW_DIGEST"
 
-          # Retrieve previously cached digest from git commit message
           OLD_DIGEST=$(git log --all --oneline --grep="upstream_digest:" -1 2>/dev/null \
             | grep -oP "upstream_digest:\s*\K[a-f0-9:]+" || echo "")
 
@@ -60,40 +59,36 @@ jobs:
             echo "New version detected: $OLD_DIGEST → $NEW_DIGEST"
           fi
 
-  # Human-in-the-loop: open a GitHub Issue when new version is found,
-  # so a maintainer can manually trigger the build workflow.
-  alert:
+  build:
     needs: check-upstream
     if: needs.check-upstream.outputs.needs_build == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Create dispatch issue
+      - name: Trigger Build & Push workflow
+        uses: actions/checkout@v6
+
+      - name: Trigger via repository dispatch
+        run: |
+          gh workflow run ".github/workflows/docker.yml" \
+            --repo Frozen12/moltis-container \
+            --field upstream_digest=${{ needs.check-upstream.outputs.new_digest }}
+
+      - name: Tag commit with upstream digest
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "ci: rebuild for upstream digest ${{ needs.check-upstream.outputs.new_digest }}"
+          git push
+
+      - name: Notify via issue
+        if: always()
         env:
           NEW_DIGEST: ${{ needs.check-upstream.outputs.new_digest }}
           OLD_DIGEST: ${{ needs.check-upstream.outputs.old_digest }}
         run: |
-          BODY="## 🚀 New Moltis upstream version detected
-
-A new version of **ghcr.io/moltis-org/moltis:latest** has been detected.
-
-| | Digest |
-|---|---|
-| **Previous** | \`$OLD_DIGEST\` |
-| **New** | \`$NEW_DIGEST\` |
-
----
-
-To rebuild and push to Docker Hub:
-1. Go to the **Actions** tab
-2. Select **Build & Push Moltis Container Image**
-3. Click **Run workflow** → **Run**
-
----
-
-*This issue was created automatically by the Check New Version workflow.*"
-
+          BODY="## Upstream Update Detected\n\nPrevious digest: $OLD_DIGEST\nNew digest: $NEW_DIGEST\n\nTriggered **Build & Push Moltis Container Image** workflow."
           gh issue create \
-            --title "🚢 Dispatch: Rebuild for upstream digest $NEW_DIGEST" \
+            --title "Rebuild triggered: upstream digest $NEW_DIGEST" \
             --body "$BODY" \
             --repo Frozen12/moltis-container \
             --label "dispatch,automated"
