@@ -1,4 +1,4 @@
-name: Check New Moltis Version
+name: Check & Build Moltis
 
 on:
   schedule:
@@ -39,7 +39,7 @@ jobs:
             exit 0
           fi
 
-          echo "New upstream digest: $NEW_DIGEST"
+          echo "New GHCR digest: $NEW_DIGEST"
 
           OLD_DIGEST=$(git log --all --oneline --grep="upstream_digest:" -1 2>/dev/null \
             | grep -oP "upstream_digest:\s*\K[a-f0-9:]+" || echo "")
@@ -59,25 +59,40 @@ jobs:
             echo "New version detected: $OLD_DIGEST → $NEW_DIGEST"
           fi
 
-  notify:
+  build:
     needs: check-upstream
     if: needs.check-upstream.outputs.needs_build == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Build & Push workflow
+      - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Trigger via repository dispatch
-        run: |
-          gh workflow run ".github/workflows/docker.yml" \
-            --repo Frozen12/moltis-container \
-            --field upstream_digest=${{ needs.check-upstream.outputs.new_digest }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: |
+            meshpotato/moltis:latest
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Tag commit with upstream digest
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git commit --allow-empty -m "ci: rebuild for upstream digest ${{ needs.check-upstream.outputs.new_digest }}"
+          git commit --allow-empty -m "ci: rebuild for upstream digest ${{ needs.check-upstream.outputs.new_digest }}
+upstream_digest: ${{ needs.check-upstream.outputs.new_digest }}"
           git push
 
       - name: Notify via issue
