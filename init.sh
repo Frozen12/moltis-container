@@ -18,8 +18,8 @@ mkdir -p \
   /data/moltis-data
 
 # Generate moltis.toml with Zo MCP server config
-# This enables moltis to connect to Zo Computer via MCP over SSE
-cat > /data/moltis-config/moltis.toml << 'MCPEOF'
+# ZO_API_TOKEN is injected at container runtime from the env var
+cat > /data/moltis-config/moltis.toml << MCPEOF
 [mcp]
 request_timeout_secs = 30
 

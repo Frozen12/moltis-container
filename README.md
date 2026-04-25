@@ -2,108 +2,130 @@
 
 # Moltis Container for ClawCloud
 
-A production-ready Docker image for running **Moltis** on ClawCloud with root access, persistent volume, and Zo Computer MCP integration.
+A production-ready Docker image for running **Moltis** on ClawCloud with root access, persistent `/data` volume, and essential tools for autonomous agents.
 
 ---
 
-## ⚠️ IMPORTANT: Set Your Gateway Token
+## Ports
 
-> The default gateway token is `changeme` — you **must** replace it before deploying publicly.
+| Port  | Protocol | Service                        |
+|-------|----------|--------------------------------|
+| `13131` | HTTP     | Moltis gateway API             |
+| `13132` | WebSocket | Moltis WebSocket connections  |
+| `1455`  | SSH      | Moltis built-in SSH server     |
 
-**Required env var to set in ClawCloud:**
+---
+
+## Quick Start
+
 ```bash
-MOLTIS_GATEWAY_TOKEN=your_actual_token_here
+docker run -d \
+  --name moltis \
+  -p 13131:13131 \
+  -p 13132:13132 \
+  -p 1455:1455 \
+  -v molt-data:/data \
+  -e MOLTIS_GATEWAY_TOKEN=your_token_here \
+  -e MOLTIS_LOG_LEVEL=info \
+  meshpotato/moltis:latest
 ```
 
 ---
 
-## 🔗 Zo Computer MCP Integration
+## Environment Variables
 
-Moltis connects to your Zo Computer workspace via the MCP (Model Context Protocol) over SSE. Configure with these env vars:
-
-| Variable | Description |
-|---|---|
-| `MOLTIS_ZO_API_TOKEN` | Your Zo Computer API token for MCP auth |
-| `MOLTIS_GATEWAY_TOKEN` | Moltis gateway password |
-
-The `moltis.toml` is auto-generated at startup with the Zo MCP server endpoint (`https://api.zo.computer/mcp`). If `MOLTIS_ZO_API_TOKEN` is set, it's injected as a bearer token in the Authorization header.
-
----
-
-## 📦 Features
-
-- **Root access** — runs as root, persistent volume fully accessible
-- **Single `/data` volume** — all state (config, data, pnpm, uv) in one place
-- **pnpm + uv pre-installed** — autonomous agents can install packages instantly
-- **Zo MCP ready** — connects to Zo Computer out of the box
-- **Debug logging** — `MOLTIS_LOG_LEVEL=debug` enabled for troubleshooting
-- **SSH built-in** — port 1455 (moltis gateway SSH)
-- **No Docker socket needed** — sandbox and Docker exec disabled
+| Variable              | Default                           | Description                              |
+|-----------------------|-----------------------------------|------------------------------------------|
+| `MOLTIS_GATEWAY_TOKEN`| `changeme_set_your_token_here`    | Gateway auth token — **change this**    |
+| `MOLTIS_LOG_LEVEL`    | `info`                            | Logging: `error` `warn` `info` `debug` `trace` |
+| `MOLTIS_PORT`         | `13131`                           | HTTP gateway port                        |
+| `MOLTIS_HOST`         | `0.0.0.0`                         | Bind address                             |
+| `MOLTIS_NO_TLS`       | `true`                            | Disable TLS                              |
+| `MOLTIS_CONFIG_DIR`   | `/data/moltis-config`             | Gateway config directory                 |
+| `MOLTIS_DATA_DIR`     | `/data/moltis-data`               | App data directory                       |
+| `MOLTIS_SANDBOX_ENABLED`| `false`                         | Sandboxing (disabled for ClawCloud)      |
+| `MOLTIS_DOCKER_ENABLED`| `false`                          | Docker access (disabled for ClawCloud)   |
+| `MOLTIS_DEPLOY_PLATFORM`| `clawcloud`                     | Deployment platform hint                 |
 
 ---
 
-## 🐳 Ports
+## Log Levels
 
-| Port | Service |
-|---|---|
-| `13131` | Moltis gateway (HTTP API) |
-| `13132` | WebSocket |
-| `1455` | SSH |
+| Level   | Use case                                          |
+|---------|---------------------------------------------------|
+| `error` | Unrecoverable issues only                        |
+| `warn`  | Unexpected but recoverable events                |
+| `info`  | Normal operational milestones (default)          |
+| `debug` | Detailed diagnostics for troubleshooting          |
+| `trace` | Very verbose per-item logging                     |
 
----
-
-## 📁 Volume
-
-Single persistent volume at `/data/` with subdirs:
-
-| Path | Purpose |
-|---|---|
-| `/data/moltis-config` | Gateway config + moltis.toml |
-| `/data/moltis-data` | App data (sessions, etc.) |
-| `/data/pnpm-store` | pnpm global store |
-| `/data/uv-cache` | uv pip cache |
+> **Recommended for production:** `info` — keeps logs clean. Use `debug` only when debugging issues.
 
 ---
 
-## 🔧 Environment Variables
+## Volumes
 
-| Variable | Default | Description |
-|---|---|---|
-| `MOLTIS_GATEWAY_TOKEN` | `changeme` | ⚠️ Change before deploy |
-| `MOLTIS_ZO_API_TOKEN` | — | Zo Computer API token for MCP auth |
-| `MOLTIS_PORT` | `13131` | Gateway port |
-| `MOLTIS_HOST` | `0.0.0.0` | Bind address |
-| `MOLTIS_LOG_LEVEL` | `debug` | Log verbosity |
-| `MOLTIS_SANDBOX_ENABLED` | `false` | Sandboxing (disabled for ClawCloud) |
-| `MOLTIS_DOCKER_ENABLED` | `false` | Docker exec (disabled) |
-| `PNPM_HOME` | `/data/pnpm-store` | pnpm data dir |
-| `UV_CACHE_DIR` | `/data/uv-cache` | uv cache dir |
+| Path                 | Purpose                              |
+|----------------------|--------------------------------------|
+| `/data`              | Single persistent volume — contains all below |
+| `/data/moltis-config`| Gateway config (moltis.toml)         |
+| `/data/moltis-data`  | App data, sessions, database        |
+| `/data/pnpm-store`   | pnpm global packages                 |
+| `/data/uv-cache`     | uv tool cache                        |
 
 ---
 
-## 🚀 Deploy on ClawCloud
+## Installed Tools
 
-1. Push to GitHub — GitHub Actions builds and pushes to Docker Hub as `meshtapotato/moltis:latest`
-2. In ClawCloud, create a service with:
-   - Image: `meshtapotato/moltis:latest`
-   - Persistent volume: `/data`
-   - Env vars: `MOLTIS_GATEWAY_TOKEN`, `MOLTIS_ZO_API_TOKEN`
-   - Ports: `13131`, `13132`, `1455`
+- **Node.js 24 LTS**
+- **pnpm** via corepack
+- **uv** Python package manager
+- **mcporter** — Zo Computer MCP server CLI
+- **curl, jq, ripgrep, fzf, rsync, gh, sudo, tmux, vim, ca-certificates**
 
 ---
 
-## 🌐 Access
+## Zo Computer MCP Integration
 
-After deployment:
+At startup, `init.sh` auto-generates `/data/moltis-config/moltis.toml` with the Zo Computer MCP server configured:
+
+```toml
+[mcp]
+request_timeout_secs = 30
+
+[mcp.servers.zo]
+transport = "sse"
+url = "https://api.zo.computer/mcp"
 ```
-http://your-clawcloud-host:13131
-SSH: your-clawcloud-host:1455
+
+Set your Zo API token at runtime:
+
+```bash
+docker run -d ... \
+  -e ZO_API_TOKEN=your_zo_token_here \
+  meshpotato/moltis:latest
 ```
 
 ---
 
-## 🛠️ Extra Packages Installed
+## Build & Push
 
-`poppler-utils unoconv html2text w3m jq ripgrep fzf rsync gh ncdu duf python3 pip mcporter`
+Every push to `main` triggers GitHub Actions which builds and pushes the image to Docker Hub as `meshtapotato/moltis:latest` (linux/amd64 + linux/arm64).
 
-Designed for autonomous agent workflows — no human-centric tools included.
+---
+
+## SSH Access
+
+Moltis has a built-in SSH server on port `1455`. Authenticate with your `MOLTIS_GATEWAY_TOKEN`:
+
+```bash
+ssh -p 1455 user@your-host
+```
+
+---
+
+## Notes
+
+- Designed for ClawCloud — runs as root, no Docker socket needed
+- Sandbox and Docker features disabled by default
+- GitHub Actions workflow: `.github/workflows/docker.yml`
