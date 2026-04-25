@@ -26,7 +26,7 @@ RUN curl -fsSL https://nodejs.org/dist/v24.0.0/node-v24.0.0-linux-x64.tar.gz \
 
 # Single persistent volume for all state
 VOLUME ["/data"]
-Workdir /data
+WORKDIR /data
 
 # Env vars for persistent volume paths — runtime uses /data for persistence
 ENV MOLTIS_CONFIG_DIR=/data/moltis-config
@@ -69,8 +69,6 @@ ENV MOLTIS_PASSWORD=Change_your_Password_Before_Use
 
 # SSH is built into moltis gateway on port 1455
 EXPOSE 13131 13132 1455
-
-WORKDIR /home/moltis
 
 COPY init.sh /data/init.sh
 RUN chmod +x /data/init.sh
