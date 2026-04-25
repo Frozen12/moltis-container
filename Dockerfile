@@ -20,13 +20,11 @@ RUN curl -fsSL https://nodejs.org/dist/v24.0.0/node-v24.0.0-linux-x64.tar.gz \
     | tar -xz -C /usr/local --strip-components=1 && \
     ln -sf /usr/local/bin/node /usr/local/bin/nodejs
 
-# pnpm via corepack (runs as root, install to /usr/local/lib/pnpm)
-ENV PNPM_HOME=/usr/local/lib/pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# mcporter — use --global-dir explicitly since pnpm checks it against PATH
-RUN mkdir -p "$PNPM_HOME/global/bin" && \
-    pnpm add -g mcporter --global-dir "$PNPM_HOME" --global-bin-dir "$PNPM_HOME/global/bin"
+# pnpm via corepack (runs as root)
+# --global-bin-dir /usr/local/bin so the bin symlinks are in PATH
+RUN corepack enable && corepack prepare pnpm@latest --activate && \
+    mkdir -p /usr/local/lib/pnpm && \
+    pnpm add -g mcporter --global-dir /usr/local/lib/pnpm --global-bin-dir /usr/local/bin
 
 # uv installer
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
