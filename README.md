@@ -20,7 +20,7 @@ A production-ready Docker image for running **Moltis** on ClawCloud with root ac
 
 | Variable              | Default                           | Description                              |
 |-----------------------|-----------------------------------|------------------------------------------|
-| `MOLTIS_GATEWAY_TOKEN`| `changeme_set_your_token_here`    | Gateway auth token — **change this**    |
+| `MOLTIS_PASSWORD`    | `changeme_set_your_password_here`     | Gateway admin password — **change this**    |
 | `MOLTIS_LOG_LEVEL`    | `info`                            | Logging: `error` `warn` `info` `debug` `trace` |
 | `MOLTIS_PORT`         | `13131`                           | HTTP gateway port                        |
 | `MOLTIS_HOST`         | `0.0.0.0`                         | Bind address                             |
@@ -100,7 +100,7 @@ Every push to `main` triggers GitHub Actions which builds and pushes the image t
 
 ## SSH Access
 
-Moltis has a built-in SSH server on port `1455`. Authenticate with your `MOLTIS_GATEWAY_TOKEN`:
+Moltis has a built-in SSH server on port `1455`. Authenticate with your `MOLTIS_PASSWORD`:
 
 ```bash
 ssh -p 1455 user@your-host
