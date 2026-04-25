@@ -14,8 +14,8 @@ jobs:
       old_sha: ${{ steps.check.outputs.old_sha }}
       new_sha: ${{ steps.check.outputs.new_sha }}
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - name: Checkout repo (workflows only for SHA check)
+        uses: actions/checkout@v6
         with:
           sparse-checkout: |
             .github/workflows/check.yml
@@ -47,11 +47,9 @@ jobs:
 
           if [ "$OLD_SHA" = "$NEW_SHA" ] || [ -z "$NEW_SHA" ]; then
             echo "needs_build=false" >> $GITHUB_OUTPUT
-            echo "::set-output name=needs_build::false"
             echo "No new version detected."
           else
             echo "needs_build=true" >> $GITHUB_OUTPUT
-            echo "::set-output name=needs_build::true"
             echo "New version detected: $OLD_SHA -> $NEW_SHA"
           fi
 
@@ -60,20 +58,20 @@ jobs:
     if: needs.check-upstream.outputs.needs_build == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - name: Checkout repo (full clone — needed for Docker build context + init.sh)
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -88,5 +86,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git commit --allow-empty -m "ci: rebuild for upstream ${{ needs.check-upstream.outputs.new_sha }}
-          upstream_sha:${{ needs.check-upstream.outputs.new_sha }}"
+upstream_sha:${{ needs.check-upstream.outputs.new_sha }}"
           git push
