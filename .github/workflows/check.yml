@@ -41,16 +41,19 @@ jobs:
 
           # Read cached digest from git history
           OLD_DIGEST=$(git log --all --oneline --grep="upstream_digest:" -1 2>/dev/null \
-            | grep -oP "upstream_digest:\s*\K[a-f0-9]+" || echo "")
+            | grep -oP "upstream_digest:\s*\K[a-f0-9:]+" || echo "")
 
           echo "Old cached digest: $OLD_DIGEST"
 
           echo "new_digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
           echo "old_digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
 
-          if [ "$OLD_DIGEST" = "$NEW_DIGEST" ] || [ -z "$OLD_DIGEST" ]; then
+          if [ "$OLD_DIGEST" = "$NEW_DIGEST" ]; then
             echo "needs_build=false" >> $GITHUB_OUTPUT
             echo "No new version detected."
+          elif [ -z "$OLD_DIGEST" ]; then
+            echo "needs_build=false" >> $GITHUB_OUTPUT
+            echo "No cached digest found — treating as first run."
           else
             echo "needs_build=true" >> $GITHUB_OUTPUT
             echo "New version detected: $OLD_DIGEST -> $NEW_DIGEST"
@@ -58,8 +61,10 @@ jobs:
 
   build:
     needs: check-upstream
-    if: needs.inputs.check-upstream.outputs.needs_build == 'true'
+    if: needs.check-upstream.outputs.needs_build == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -85,9 +90,11 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Tag commit with upstream digest
+        env:
+          NEW_DIGEST: ${{ needs.check-upstream.outputs.new_digest }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git commit --allow-empty -m "ci: rebuild for upstream digest ${{ needs.check-upstream.outputs.new_digest }}
-upstream_digest: ${{ needs.check-upstream.outputs.new_digest }}"
+          git commit --allow-empty -m "ci: rebuild for upstream digest $NEW_DIGEST" \
+            -m "upstream_digest: $NEW_DIGEST"
           git push
