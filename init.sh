@@ -1,6 +1,7 @@
 #!/bin/sh
 set -e
 
+export NPM_CONFIG_PREFIX=/data/npm
 export PNPM_HOME=/data/pnpm-store
 export PNPM_STORE_DIR=/data/pnpm-store
 export UV_CACHE_DIR=/data/uv-cache
@@ -10,6 +11,7 @@ export SHELL=/bin/bash
 
 # Ensure all persistent dirs exist
 mkdir -p \
+   /data/npm \
   /data/pnpm-store \
   /data/pnpm-store/global \
   /data/uv-cache \
