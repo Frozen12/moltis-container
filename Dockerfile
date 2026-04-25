@@ -5,6 +5,9 @@ FROM ghcr.io/moltis-org/moltis:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Switch to root for package installation (base image ends with USER moltis)
+USER root
+
 # Essential tools for autonomous agent (no bloat)
 # Removed: curl,ca-certificates (in base), sudo (root), ncdu (dup of duf)
 RUN apt-get update -qq && \
@@ -34,6 +37,9 @@ RUN npm install -g @tobilu/qmd
 
 # mcporter — Zo Computer MCP server CLI (via pnpm)
 RUN pnpm add -g mcporter
+
+# Switch back to moltis user for runtime
+USER moltis
 
 # Single persistent volume for all state
 VOLUME ["/data"]
