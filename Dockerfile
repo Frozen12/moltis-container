@@ -15,15 +15,10 @@ RUN apt-get update -qq && \
         jq ripgrep fzf rsync gh duf python3 tmux && \
     rm -rf /var/lib/apt/lists/*
 
-# Node.js 24 LTS — batch mode avoids /dev/tty in non-interactive builds
-RUN install -m 0755 -d /etc/apt/keyrings && \
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-    | gpg --batch --no-tty --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
-    > /etc/apt/sources.list.d/nodesource.list && \
-    apt-get update -qq && \
-    apt-get install -yqq --no-install-recommends nodejs && \
-    rm -rf /var/lib/apt/lists/*
+# Node.js 24 LTS — download official binary tarball directly (no gpg/apt complexity)
+RUN curl -fsSL https://nodejs.org/dist/v24.0.0/node-v24.0.0-linux-x64.tar.gz \
+    | tar -xz -C /usr/local --strip-components=1 && \
+    ln -sf /usr/local/bin/node /usr/local/bin/nodejs
 
 # pnpm via corepack (runs as root, global install)
 RUN corepack enable && corepack prepare pnpm@latest --activate
