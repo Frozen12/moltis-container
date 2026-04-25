@@ -2,4 +2,3 @@
 .github
 *.md
 Dockerfile
-init.sh
