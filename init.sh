@@ -28,16 +28,5 @@ transport = "sse"
 url = "https://api.zo.computer/mcp"
 MCPEOF
 
-# Wait for moltis to be ready
-echo "Waiting for moltis to start..."
-for i in $(seq 1 30); do
-  if curl -sf http://localhost:${MOLTIS_PORT:-13131}/health > /dev/null 2>&1; then
-    echo "Moltis is ready"
-    break
-  fi
-  echo "Waiting... ($i/30)"
-  sleep 2
-done
-
-# Start moltis
+# Start Moltis
 exec moltis --bind 0.0.0.0 --port ${MOLTIS_PORT:-13131}
