@@ -20,8 +20,12 @@ RUN curl -fsSL https://nodejs.org/dist/v24.0.0/node-v24.0.0-linux-x64.tar.gz \
     | tar -xz -C /usr/local --strip-components=1 && \
     ln -sf /usr/local/bin/node /usr/local/bin/nodejs
 
-# pnpm via corepack (runs as root, global install)
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# pnpm via corepack (runs as root, global install to /usr/local)
+# Use PNPM_HOME=/usr/local/lib/pnpm for build-time (not the /data volume)
+ENV PNPM_HOME=/usr/local/lib/pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate && \
+    mkdir -p "$PNPM_HOME/global" && \
+    pnpm config set global-dir "$PNPM_HOME/global"
 
 # uv installer
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
@@ -36,7 +40,7 @@ USER moltis
 # Single persistent volume for all state
 VOLUME ["/data"]
 
-# Env vars for persistent volume paths
+# Env vars for persistent volume paths — runtime uses /data for persistence
 ENV MOLTIS_CONFIG_DIR=/data/moltis-config
 ENV MOLTIS_DATA_DIR=/data/moltis-data
 ENV PNPM_HOME=/data/pnpm-store
