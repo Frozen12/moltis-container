@@ -60,6 +60,9 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     ln -sf /root/.local/bin/uv /usr/local/bin/uv
 
+# Install mcporter for MCP client connectivity (Zo Computer integration)
+RUN pnpm add -g mcporter
+
 # Install extra packages an autonomous agent might need (no human tools)
 RUN apt-get update -qq && \
     apt-get install -yqq --no-install-recommends \
