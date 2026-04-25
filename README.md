@@ -16,22 +16,6 @@ A production-ready Docker image for running **Moltis** on ClawCloud with root ac
 
 ---
 
-## Quick Start
-
-```bash
-docker run -d \
-  --name moltis \
-  -p 13131:13131 \
-  -p 13132:13132 \
-  -p 1455:1455 \
-  -v molt-data:/data \
-  -e MOLTIS_GATEWAY_TOKEN=your_token_here \
-  -e MOLTIS_LOG_LEVEL=info \
-  meshpotato/moltis:latest
-```
-
----
-
 ## Environment Variables
 
 | Variable              | Default                           | Description                              |
