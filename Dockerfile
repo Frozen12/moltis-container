@@ -72,6 +72,9 @@ EXPOSE 13131 13132 1455
 
 WORKDIR /home/moltis
 
-ENTRYPOINT ["/init.sh"]
+COPY init.sh /data/init.sh
+RUN chmod +x /data/init.sh
+
+ENTRYPOINT ["/data/init.sh"]
 # Port and bind set via env vars, not CLI — per cloud-deploy docs
 CMD []
