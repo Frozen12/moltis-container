@@ -20,19 +20,17 @@ RUN curl -fsSL https://nodejs.org/dist/v24.0.0/node-v24.0.0-linux-x64.tar.gz \
     | tar -xz -C /usr/local --strip-components=1 && \
     ln -sf /usr/local/bin/node /usr/local/bin/nodejs
 
-# pnpm via corepack (runs as root, global install to /usr/local)
-# Use PNPM_HOME=/usr/local/lib/pnpm for build-time (not the /data volume)
+# pnpm via corepack (runs as root, install to /usr/local/lib/pnpm)
 ENV PNPM_HOME=/usr/local/lib/pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate && \
-    mkdir -p "$PNPM_HOME/global" && \
-    pnpm config set global-dir "$PNPM_HOME/global"
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# mcporter — use --global-dir explicitly since pnpm checks it against PATH
+RUN mkdir -p "$PNPM_HOME/global/bin" && \
+    pnpm add -g mcporter --global-dir "$PNPM_HOME" --global-bin-dir "$PNPM_HOME/global/bin"
 
 # uv installer
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     ln -sf /root/.local/bin/uv /usr/local/bin/uv
-
-# mcporter — Zo Computer MCP server CLI (via pnpm)
-RUN pnpm add -g mcporter
 
 # Switch to moltis user for runtime
 USER moltis
