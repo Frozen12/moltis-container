@@ -1,16 +1,25 @@
 # Moltis for ClawCloud — root user, single /data volume
-# Base: official moltis image with pnpm, uv, mcporter, and autonomous agent tools added
+# Base: official moltis image with essential tools added
 
 FROM ghcr.io/moltis-org/moltis:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV SHELL=/bin/bash
 
-# Base tools for autonomous agent
+# Essential tools for autonomous agent (no bloat)
 RUN apt-get update -qq && \
     apt-get install -yqq --no-install-recommends \
-        poppler-utils unoconv html2text w3m jq ripgrep fzf rsync gh ncdu duf python3 python3-pip \
-        curl sudo tmux vim-tiny ca-certificates && \
+        jq ripgrep fzf rsync gh ncdu duf python3 curl tmux ca-certificates \
+        sudo && \
+    rm -rf /var/lib/apt/lists/*
+
+# Node.js 24 LTS
+RUN install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+    | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
+    > /etc/apt/sources.list.d/nodesource.list && \
+    apt-get update -qq && \
+    apt-get install -yqq --no-install-recommends nodejs && \
     rm -rf /var/lib/apt/lists/*
 
 # pnpm via corepack
@@ -19,16 +28,6 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # uv installer
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     ln -sf /root/.local/bin/uv /usr/local/bin/uv
-
-# Node.js 22 LTS (override base image version if needed)
-RUN install -m 0755 -d /etc/apt/keyrings && \
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-    | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
-    > /etc/apt/sources.list.d/nodesource.list && \
-    apt-get update -qq && \
-    apt-get install -yqq --no-install-recommends nodejs && \
-    rm -rf /var/lib/apt/lists/*
 
 # mcporter — Zo Computer MCP server CLI (via pnpm)
 RUN pnpm add -g mcporter
