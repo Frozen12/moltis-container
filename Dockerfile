@@ -46,6 +46,17 @@ ENV UV_TOOL_DIR=/data/uv-tools
 ENV UV_LINK_MODE=copy
 ENV PATH="/data/pnpm-store/global/bin:/root/.local/bin:/usr/local/bin:${PATH}"
 
+# Cloud deployment env vars — use MOLTIS_* prefix per docs.moltis.org/cloud-deploy.html
+ENV MOLTIS_BIND=0.0.0.0
+ENV MOLTIS_NO_TLS=true
+ENV MOLTIS_PORT=13131
+ENV MOLTIS_LOG_LEVEL=info
+ENV MOLTIS_DEPLOY_PLATFORM=clawcloud
+
+# Data directories (runtime persistence)
+ENV MOLTIS_CONFIG_DIR=/data/moltis-config
+ENV MOLTIS_DATA_DIR=/data/moltis-data
+
 # Disable sandbox and docker (ClawCloud doesn't provide socket)
 ENV MOLTIS_SANDBOX_ENABLED=false
 ENV MOLTIS_DOCKER_ENABLED=false
@@ -54,15 +65,11 @@ ENV MOLTIS_DOCKER_ENABLED=false
 # Gateway token — user replaces this before deploy
 ENV MOLTIS_GATEWAY_TOKEN=changeme_set_your_token_here
 
-# Port config (moltis default)
-ENV MOLTIS_PORT=13131
-ENV MOLTIS_HOST=0.0.0.0
-ENV MOLTIS_LOG_LEVEL=info
-
 # SSH is built into moltis gateway on port 1455
 EXPOSE 13131 13132 1455
 
 WORKDIR /home/moltis
 
 ENTRYPOINT ["/init.sh"]
-CMD ["--bind", "0.0.0.0", "--port", "13131"]
+# Port and bind set via env vars, not CLI — per cloud-deploy docs
+CMD []
