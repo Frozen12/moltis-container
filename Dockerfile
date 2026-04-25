@@ -99,6 +99,7 @@ ENV MOLTIS_GATEWAY_TOKEN=changeme_set_your_token_here
 # Port config (moltis default)
 ENV MOLTIS_PORT=13131
 ENV MOLTIS_HOST=0.0.0.0
+ENV MOLTIS_LOG_LEVEL=debug
 
 # SSH is built into moltis gateway on port 1455
 EXPOSE 13131 13132 1455
