@@ -1,36 +1,6 @@
 # Moltis for ClawCloud — root user, single persistent volume
-# Built on official moltis multi-stage build
-FROM rust:bookworm AS builder
+# Uses pre-built moltis release from GitHub
 
-WORKDIR /build
-RUN rustup install nightly-2025-11-30 && rustup default nightly-2025-11-30
-
-COPY Cargo.toml Cargo.lock ./
-COPY crates ./crates
-COPY apps/courier ./apps/courier
-COPY wit ./wit
-
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update -qq && \
-    apt-get install -yqq --no-install-recommends cmake build-essential libclang-dev pkg-config git && \
-    rm -rf /var/lib/apt/lists/*
-
-# Build Tailwind CSS
-RUN ARCH=$(uname -m) && \
-    case "$ARCH" in x86_64) TW="tailwindcss-linux-x64";; aarch64) TW="tailwindcss-linux-arm64";; esac && \
-    curl -sLO "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/$TW" && \
-    chmod +x "$TW" && \
-    cd crates/web/ui && TAILWINDCSS="../../../$TW" ./build.sh
-
-# Build WASM components
-RUN rustup target add wasm32-wasip2 && \
-    cargo build --target wasm32-wasip2 -p moltis-wasm-calc -p moltis-wasm-web-fetch -p moltis-wasm-web-search --release
-
-ARG MOLTIS_VERSION
-ENV MOLTIS_VERSION=${MOLTIS_VERSION}
-RUN cargo build --release -p moltis --features wasm
-
-# Runtime stage
 FROM debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -60,21 +30,20 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     ln -sf /root/.local/bin/uv /usr/local/bin/uv
 
-# Install mcporter for MCP client connectivity (Zo Computer integration)
-RUN pnpm add -g mcporter
-
 # Install extra packages an autonomous agent might need (no human tools)
 RUN apt-get update -qq && \
     apt-get install -yqq --no-install-recommends \
         poppler-utils unoconv html2text w3m jq ripgrep fzf rsync gh ncdu duf python3 pip && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy binary and assets from builder
-COPY --from=builder /build/target/release/moltis /usr/local/bin/moltis
-COPY --from=builder /build/crates/web/src/assets /usr/share/moltis/web
-COPY --from=builder /build/target/wasm32-wasip2/release/moltis_wasm_calc.wasm /usr/share/moltis/wasm/
-COPY --from=builder /build/target/wasm32-wasip2/release/moltis_wasm_web_fetch.wasm /usr/share/moltis/wasm/
-COPY --from=builder /build/target/wasm32-wasip2/release/moltis_wasm_web_search.wasm /usr/share/moltis/wasm/
+# Install moltis from GitHub releases
+RUN curl -fLs "https://api.github.com/repos/moltis-org/moltis/releases/latest" | \
+    python3 -c "import sys,json,re; d=json.load(sys.stdin); t=d['tag_name']; v=re.sub(r'^v','',t); print(t,v)" > /tmp/tag.txt && \
+    TAG=$(cut -d' ' -f1 /tmp/tag.txt) && \
+    VERSION=$(cut -d' ' -f2 /tmp/tag.txt) && \
+    curl -fL "https://github.com/moltis-org/moltis/releases/download/$TAG/moltis_${VERSION}_amd64.deb" -o /tmp/moltis.deb && \
+    dpkg -i /tmp/moltis.deb || apt-get -f install -y && \
+    rm -f /tmp/moltis.deb /tmp/tag.txt
 
 # Single persistent volume for all state
 # - /data/moltis-config  → gateway config
@@ -108,6 +77,9 @@ ENV MOLTIS_LOG_LEVEL=debug
 EXPOSE 13131 13132 1455
 
 WORKDIR /home/moltis
+
+COPY init.sh /init.sh
+RUN chmod +x /init.sh
 
 ENTRYPOINT ["moltis"]
 CMD ["--bind", "0.0.0.0", "--port", "13131"]
