@@ -54,16 +54,15 @@ ENV MOLTIS_LOG_LEVEL=info
 ENV MOLTIS_DEPLOY_PLATFORM=clawcloud
 
 # Data directories (runtime persistence)
-ENV MOLTIS_CONFIG_DIR=/data/moltis-config
-ENV MOLTIS_DATA_DIR=/data/moltis-data
 
 # Disable sandbox and docker (ClawCloud doesn't provide socket)
 ENV MOLTIS_SANDBOX_ENABLED=false
 ENV MOLTIS_DOCKER_ENABLED=false
 
 
-# Gateway token — user replaces this before deploy
-ENV MOLTIS_GATEWAY_TOKEN=changeme_set_your_token_here
+# Initial admin password — set via env for automated cloud deployment
+# Shows recovery key on first boot; store it securely
+ENV MOLTIS_PASSWORD=
 
 # SSH is built into moltis gateway on port 1455
 EXPOSE 13131 13132 1455
