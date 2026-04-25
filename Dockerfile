@@ -6,10 +6,10 @@ FROM ghcr.io/moltis-org/moltis:latest
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Essential tools for autonomous agent (no bloat)
+# Removed: curl,ca-certificates (in base), sudo (root), ncdu (dup of duf)
 RUN apt-get update -qq && \
     apt-get install -yqq --no-install-recommends \
-        jq ripgrep fzf rsync gh ncdu duf python3 curl tmux ca-certificates \
-        sudo && \
+        jq ripgrep fzf rsync gh duf python3 tmux && \
     rm -rf /var/lib/apt/lists/*
 
 # Node.js 24 LTS
@@ -29,6 +29,9 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
     ln -sf /root/.local/bin/uv /usr/local/bin/uv
 
+# QMD — semantic search sidecar for moltis memory
+RUN npm install -g @tobilu/qmd
+
 # mcporter — Zo Computer MCP server CLI (via pnpm)
 RUN pnpm add -g mcporter
 
@@ -43,6 +46,7 @@ ENV PNPM_STORE_DIR=/data/pnpm-store/store
 ENV UV_CACHE_DIR=/data/uv-cache
 ENV UV_TOOL_DIR=/data/uv-tools
 ENV UV_LINK_MODE=copy
+ENV QMD_DATA_DIR=/data/qmd-data
 ENV PATH="/data/pnpm-store/global/bin:/root/.local/bin:/usr/local/bin:${PATH}"
 
 # Disable sandbox and docker (ClawCloud doesn't provide socket)
@@ -62,5 +66,6 @@ EXPOSE 13131 13132 1455
 
 WORKDIR /home/moltis
 
-ENTRYPOINT ["moltis"]
+# Run init.sh first (sets up dirs + moltis.toml), then exec into moltis
+ENTRYPOINT ["/bin/sh", "/init.sh"]
 CMD ["--bind", "0.0.0.0", "--port", "13131"]
