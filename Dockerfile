@@ -1,19 +1,26 @@
-# Moltis for ClawCloud — root user, single persistent volume
-# Uses pre-built moltis release from GitHub
+# Moltis for ClawCloud — root user, single /data volume
+# Base: official moltis image with pnpm, uv, mcporter, and autonomous agent tools added
 
-FROM debian:bookworm-slim
+FROM ghcr.io/moltis-org/moltis:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV SHELL=/bin/bash
 
-# Base dependencies + Node.js 22 + pnpm via corepack + uv
+# Base tools for autonomous agent
 RUN apt-get update -qq && \
     apt-get install -yqq --no-install-recommends \
-        ca-certificates chromium curl gnupg libgomp1 sudo tmux vim-tiny \
-        build-essential cmake libclang-dev pkg-config git && \
+        poppler-utils unoconv html2text w3m jq ripgrep fzf rsync gh ncdu duf python3 python3-pip \
+        curl sudo tmux vim-tiny ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Node.js 22 LTS
+# pnpm via corepack
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# uv installer
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    ln -sf /root/.local/bin/uv /usr/local/bin/uv
+
+# Node.js 22 LTS (override base image version if needed)
 RUN install -m 0755 -d /etc/apt/keyrings && \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
     | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
@@ -23,33 +30,10 @@ RUN install -m 0755 -d /etc/apt/keyrings && \
     apt-get install -yqq --no-install-recommends nodejs && \
     rm -rf /var/lib/apt/lists/*
 
-# pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    ln -sf /root/.local/bin/uv /usr/local/bin/uv
-
-# Install extra packages an autonomous agent might need (no human tools)
-RUN apt-get update -qq && \
-    apt-get install -yqq --no-install-recommends \
-        poppler-utils unoconv html2text w3m jq ripgrep fzf rsync gh ncdu duf python3 pip && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install moltis from GitHub releases
-RUN curl -fLs "https://api.github.com/repos/moltis-org/moltis/releases/latest" | \
-    python3 -c "import sys,json,re; d=json.load(sys.stdin); t=d['tag_name']; v=re.sub(r'^v','',t); print(t,v)" > /tmp/tag.txt && \
-    TAG=$(cut -d' ' -f1 /tmp/tag.txt) && \
-    VERSION=$(cut -d' ' -f2 /tmp/tag.txt) && \
-    curl -fL "https://github.com/moltis-org/moltis/releases/download/$TAG/moltis_${VERSION}_amd64.deb" -o /tmp/moltis.deb && \
-    dpkg -i /tmp/moltis.deb || apt-get -f install -y && \
-    rm -f /tmp/moltis.deb /tmp/tag.txt
+# mcporter — Zo Computer MCP server CLI (via pnpm)
+RUN pnpm add -g mcporter
 
 # Single persistent volume for all state
-# - /data/moltis-config  → gateway config
-# - /data/moltis-data    → app data (sessions, etc.)
-# - /data/pnpm-store     → pnpm store (PNPM_HOME also set below)
-# - /data/uv-cache       → uv cache
 VOLUME ["/data"]
 
 # Env vars for persistent volume paths
@@ -58,8 +42,9 @@ ENV MOLTIS_DATA_DIR=/data/moltis-data
 ENV PNPM_HOME=/data/pnpm-store
 ENV PNPM_STORE_DIR=/data/pnpm-store/store
 ENV UV_CACHE_DIR=/data/uv-cache
+ENV UV_TOOL_DIR=/data/uv-tools
 ENV UV_LINK_MODE=copy
-ENV PATH="/data/pnpm-store/global/bin:/root/.local/bin:${PATH}"
+ENV PATH="/data/pnpm-store/global/bin:/root/.local/bin:/usr/local/bin:${PATH}"
 
 # Disable sandbox and docker (ClawCloud doesn't provide socket)
 ENV MOLTIS_SANDBOX_ENABLED=false
@@ -77,9 +62,6 @@ ENV MOLTIS_LOG_LEVEL=debug
 EXPOSE 13131 13132 1455
 
 WORKDIR /home/moltis
-
-COPY init.sh /init.sh
-RUN chmod +x /init.sh
 
 ENTRYPOINT ["moltis"]
 CMD ["--bind", "0.0.0.0", "--port", "13131"]
