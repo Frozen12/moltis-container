@@ -15,11 +15,10 @@ mkdir -p \
   /data/uv-cache \
   /data/uv-tools \
   /data/moltis-config \
-  /data/moltis-data \
-  /data/qmd
+  /data/moltis-data
 
-# Generate moltis.toml with QMD semantic search + Zo MCP server config
-# ZO_API_TOKEN is injected at container runtime from the env var
+# Generate moltis.toml with Zo MCP server config
+# QMD auto-configured by moltis agents when needed
 cat > /data/moltis-config/moltis.toml << MCPEOF
 [mcp]
 request_timeout_secs = 30
@@ -27,11 +26,6 @@ request_timeout_secs = 30
 [mcp.servers.zo]
 transport = "sse"
 url = "https://api.zo.computer/mcp"
-
-[qmd]
-dir = "/data/qmd"
-index_bm25 = true
-index_embed = true
 MCPEOF
 
 # Start Moltis

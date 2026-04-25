@@ -50,10 +50,6 @@ ENV PATH="/data/pnpm-store/global/bin:/root/.local/bin:/usr/local/bin:${PATH}"
 ENV MOLTIS_SANDBOX_ENABLED=false
 ENV MOLTIS_DOCKER_ENABLED=false
 
-# QMD semantic search config
-ENV QMD_DIR=/data/qmd
-ENV QMD_INDEX_BM25=true
-ENV QMD_INDEX_EMBED=true
 
 # Gateway token — user replaces this before deploy
 ENV MOLTIS_GATEWAY_TOKEN=changeme_set_your_token_here
