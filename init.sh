@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 export NPM_CONFIG_PREFIX=/data/npm
@@ -30,5 +30,14 @@ transport = "sse"
 url = "https://api.zo.computer/mcp"
 MCPEOF
 
+# 🔥 SAFE PORT HANDLING
+PORT="${MOLTIS_PORT:-13131}"
+
+case "$PORT" in
+  tcp://*)
+    PORT="${PORT##*:}"
+    ;;
+esac
+
 # Start Moltis
-exec moltis --bind 0.0.0.0 --port ${MOLTIS_PORT:-13131}
+exec moltis --bind 0.0.0.0 --port $PORT
