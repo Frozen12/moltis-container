@@ -30,47 +30,27 @@ jobs:
             --format '{{.Manifest.Digest}}' 2>/dev/null || true)
 
           if [ -z "$NEW_DIGEST" ] || [ "$NEW_DIGEST" = "<no value>" ]; then
-            echo "❌ Failed to fetch real digest — skipping to avoid false trigger"
+            echo "❌ Failed to fetch real digest — skipping"
             exit 0
           fi
 
-          echo "NEW_DIGEST=$NEW_DIGEST" >> $GITHUB_ENV
-
           OLD_DIGEST=$(cat .upstream_digest 2>/dev/null || echo "")
-          echo "OLD_DIGEST=$OLD_DIGEST" >> $GITHUB_ENV
 
           echo "New: $NEW_DIGEST"
           echo "Old: ${OLD_DIGEST:-<none>}"
 
           if [ "$OLD_DIGEST" = "$NEW_DIGEST" ]; then
             echo "No change detected."
-            echo "changed=false" >> $GITHUB_ENV
-          else
-            echo "Change detected!"
-            echo "changed=true" >> $GITHUB_ENV
+            exit 0
           fi
 
-      - name: Trigger docker.yml
-        if: env.changed == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Triggering docker workflow..."
+          echo "Change detected!"
 
-          curl -s -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/dispatches \
-            -d '{"event_type":"check-upstream"}'
-
-      - name: Record digest
-        if: env.changed == 'true'
-        run: |
           echo "$NEW_DIGEST" > .upstream_digest
 
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
           git add .upstream_digest
-          git commit -m "ci: update upstream digest $NEW_DIGEST" || echo "No changes to commit"
+          git commit -m "ci: update upstream digest $NEW_DIGEST" || echo "No changes"
           git push
