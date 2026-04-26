@@ -19,17 +19,6 @@ mkdir -p \
   /data/moltis-config \
   /data/moltis-data
 
-# Generate moltis.toml with Zo MCP server config
-# QMD auto-configured by moltis agents when needed
-cat > /data/moltis-config/moltis.toml << MCPEOF
-[mcp]
-request_timeout_secs = 30
-
-[mcp.servers.zo]
-transport = "sse"
-url = "https://api.zo.computer/mcp"
-MCPEOF
-
 # 🔥 SAFE PORT HANDLING
 PORT="${MOLTIS_PORT:-13131}"
 
