@@ -8,7 +8,7 @@ A production-ready Docker image for running **Moltis** on ClawCloud with root ac
 
 ## Ports
 
-| Port  | Protocol | Service                        |
+| Port  | Service                        |
 |-------|----------|--------------------------------|
 | `13131` | Gateway (HTTPS) — web UI, API, WebSocket           |
 | `13132` | HTTP — CA certificate download for TLS trust |
