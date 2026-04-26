@@ -20,9 +20,6 @@ RUN curl -fsSL https://nodejs.org/dist/v24.0.0/node-v24.0.0-linux-x64.tar.gz \
     | tar -xz -C /usr/local --strip-components=1 && \
     ln -sf /usr/local/bin/node /usr/local/bin/nodejs
 
-RUN npm install -g @tobilu/qmd 
-# Switch to moltis user for runtime
-# USER moltis
 
 # Single persistent volume for all state
 VOLUME ["/data"]
