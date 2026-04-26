@@ -20,14 +20,5 @@ mkdir -p \
   /data/moltis-config \
   /data/moltis-data
 
-# 🔥 SAFE PORT HANDLING
-PORT="${MOLTIS_PORT:-13131}"
-
-case "$PORT" in
-  tcp://*)
-    PORT="${PORT##*:}"
-    ;;
-esac
-
 # Start Moltis
-exec moltis --bind 0.0.0.0 --port $PORT
+exec moltis --bind 0.0.0.0 --port 13131
