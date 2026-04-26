@@ -13,8 +13,6 @@ export SHELL=/bin/bash
 # Ensure all persistent dirs exist
 mkdir -p \
   /data/npm \
-  # /data/pnpm-store \
-  # /data/pnpm-store/global \
   /data/uv-cache \
   /data/uv-tools \
   /data/moltis-config \
