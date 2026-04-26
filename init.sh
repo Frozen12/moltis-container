@@ -57,4 +57,4 @@ export TMPDIR=/tmp
 export PATH="/data/npm/bin:/data/uv-tools/bin:/usr/local/bin:$PATH"
 
 # Start Moltis
-exec moltis
+exec moltis --bind 0.0.0.0 --port 13131
