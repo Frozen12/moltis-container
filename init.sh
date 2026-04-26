@@ -13,7 +13,11 @@ export MOLTIS_SANDBOX_ENABLED=false
 export MOLTIS_DOCKER_ENABLED=false
 
 # Generate password only if MOLTIS_PASSWORD is empty or unset
-export MOLTIS_PASSWORD="${MOLTIS_PASSWORD:-$(openssl rand -base64 16)}"
+# If empty → generate and log it
+if [ -z "${MOLTIS_PASSWORD}" ]; then
+  export MOLTIS_PASSWORD="$(openssl rand -base64 16)"
+  echo "[MOLTIS] Generated password: ${MOLTIS_PASSWORD}"
+fi
 
 # =========================
 # npm / npx setup
