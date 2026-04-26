@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 export NPM_CONFIG_PREFIX=/data/npm
