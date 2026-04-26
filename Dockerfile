@@ -32,19 +32,21 @@ WORKDIR /data
 ENV MOLTIS_CONFIG_DIR=/data/moltis-config
 ENV MOLTIS_DATA_DIR=/data/moltis-data
 ENV NPM_CONFIG_PREFIX=/data/npm
-ENV PNPM_HOME=/data/pnpm-store
-ENV PNPM_STORE_DIR=/data/pnpm-store/store
+# ENV SHELL=/bin/bash
+# ENV PNPM_HOME=/data/pnpm-store
+# ENV PNPM_STORE_DIR=/data/pnpm-store/store
 ENV UV_CACHE_DIR=/data/uv-cache
 ENV UV_TOOL_DIR=/data/uv-tools
 ENV UV_LINK_MODE=copy
-ENV PATH="/data/pnpm-store/global/bin:/root/.local/bin:/usr/local/bin:${PATH}"
-ENV SHELL=/bin/bash
+# ENV PATH="/data/pnpm-store/global/bin:/root/.local/bin:/usr/local/bin:${PATH}"
+ENV PATH="/root/.local/bin:/usr/local/bin:${PATH}"
+
 # pnpm via corepack (runs as root)
 # --global-bin-dir /usr/local/bin so the bin symlinks are in PATH
-RUN corepack enable && corepack prepare pnpm@latest --activate && \
-    pnpm setup && \
-    mkdir -p /usr/local/lib/pnpm && \
-    pnpm add -g mcporter --global-dir /usr/local/lib/pnpm --global-bin-dir /usr/local/bin
+# RUN corepack enable && corepack prepare pnpm@latest --activate && \
+#     pnpm setup && \
+#     mkdir -p /usr/local/lib/pnpm && \
+#     npm add -g mcporter --global-dir /usr/local/lib/pnpm --global-bin-dir /usr/local/bin
 
 # uv installer
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
@@ -53,7 +55,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
 # Cloud deployment env vars — use MOLTIS_* prefix per docs.moltis.org/cloud-deploy.html
 ENV MOLTIS_BIND=0.0.0.0
 ENV MOLTIS_NO_TLS=true
-ENV MOLTIS_PORT=13131
+# ENV MOLTIS_PORT=13131
 ENV MOLTIS_DEPLOY_PLATFORM=clawcloud
 
 # Data directories (runtime persistence)
