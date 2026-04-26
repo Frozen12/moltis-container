@@ -1,8 +1,10 @@
 name: Build & Push Moltis Container Image
 
 on:
-  repository_dispatch:
-    types: [check-upstream]
+  workflow_run:
+    workflows: ["Check Upstream Moltis"]
+    types:
+      - completed
   workflow_dispatch:
 
 permissions:
@@ -15,10 +17,28 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success')
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
+
+      - name: Check if digest changed
+        id: check_digest
+        run: |
+          if git diff --name-only HEAD~1 | grep -q ".upstream_digest"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stop if no change
+        if: steps.check_digest.outputs.changed == 'false'
+        run: |
+          echo "No upstream change detected. Skipping build."
+          exit 0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -34,20 +54,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Read stored upstream digest
-          DIGEST=$(cat .upstream_digest 2>/dev/null || echo "unknown")
-
-          # Short SHA for tagging
-          SHORT=$(echo "$DIGEST" | cut -c8-19 || echo "unknown")
-
-          # Date tag
+          DIGEST=$(cat .upstream_digest)
+          SHORT=$(echo "$DIGEST" | cut -c8-19)
           DATE=$(date -u +%Y%m%d)
 
           echo "digest=$DIGEST" >> $GITHUB_OUTPUT
           echo "short=$SHORT" >> $GITHUB_OUTPUT
           echo "date=$DATE" >> $GITHUB_OUTPUT
-
-          echo "Using digest: $DIGEST"
 
       - name: Build and push
         uses: docker/build-push-action@v7
