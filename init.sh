@@ -3,7 +3,7 @@ set -e
 
 # Ensure all persistent dirs exist
 mkdir -p \
-  /data/tmp \
+  /tmp \
   /data/npm \
   /data/npm-cache \
   /data/uv-cache \
@@ -47,9 +47,9 @@ export UV_TOOL_DIR=/data/uv-tools
 # temp (fix npx runtime 100MB limit issue)
 # =========================
 # Erase /data/tmp/ contents
-rm -rf /data/tmp/*
+rm -rf /tmp/*
 # set tmpt directory
-export TMPDIR=/data/tmp
+export TMPDIR=/tmp
 
 # =========================
 # PATH (priority order)
