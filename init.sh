@@ -8,6 +8,10 @@ export MOLTIS_BIND=0.0.0.0
 export MOLTIS_NO_TLS=true
 export MOLTIS_DEPLOY_PLATFORM=clawcloud
 
+# Moltis Config and Data Directory
+export MOLTIS_CONFIG_DIR=/data/moltis-config
+export MOLTIS_DATA_DIR=/data/moltis-data 
+
 # Disable unsupported features (ClawCloud)
 export MOLTIS_SANDBOX_ENABLED=false
 export MOLTIS_DOCKER_ENABLED=false
