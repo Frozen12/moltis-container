@@ -2,11 +2,8 @@
 set -e
 
 export NPM_CONFIG_PREFIX=/data/npm
-# export PNPM_HOME=/data/pnpm-store
-# export PNPM_STORE_DIR=/data/pnpm-store
 export UV_CACHE_DIR=/data/uv-cache
 export UV_TOOL_DIR=/data/uv-tools
-# export PATH="/data/pnpm-store/global/bin:/data/uv-tools/bin:/usr/local/bin:$PATH"
 export PATH="/data/uv-tools/bin:/usr/local/bin:$PATH"
 export SHELL=/bin/bash
 
