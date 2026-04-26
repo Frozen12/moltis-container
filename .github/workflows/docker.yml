@@ -4,9 +4,11 @@ on:
   push:
     branches: [ "main" ]
   schedule:
-    - cron: "0 3 * * *"   # daily rebuild to pick up moltis upstream updates
+    - cron: "0 3 * * *"
   workflow_dispatch:
-
+  repository_dispatch:
+    types: [check-upstream]
+    
 jobs:
   build:
     runs-on: ubuntu-latest
