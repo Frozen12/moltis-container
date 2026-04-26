@@ -10,9 +10,9 @@ A production-ready Docker image for running **Moltis** on ClawCloud with root ac
 
 | Port  | Protocol | Service                        |
 |-------|----------|--------------------------------|
-| `13131` | HTTP     | Moltis gateway API             |
-| `13132` | WebSocket | Moltis WebSocket connections  |
-| `1455`  | SSH      | Moltis built-in SSH server     |
+| `13131` | HTTP     | Gateway (HTTPS) — web UI, API, WebSocket           |
+| `13132` | WebSocket | HTTP — CA certificate download for TLS trust |
+| `1455`  | SSH      | OAuth callback — required for OpenAI Codex and other providers with pre-registered redirect URIs    |
 
 ---
 
@@ -21,9 +21,6 @@ A production-ready Docker image for running **Moltis** on ClawCloud with root ac
 | Variable              | Default                           | Description                              |
 |-----------------------|-----------------------------------|------------------------------------------|
 | `MOLTIS_PASSWORD`    | `changeme_set_your_password_here`     | Gateway admin password — **change this**    |
-| `MOLTIS_LOG_LEVEL`    | `info`                            | Logging: `error` `warn` `info` `debug` `trace` |
-| `MOLTIS_PORT`         | `13131`                           | HTTP gateway port                        |
-| `MOLTIS_HOST`         | `0.0.0.0`                         | Bind address                             |
 | `MOLTIS_NO_TLS`       | `true`                            | Disable TLS                              |
 | `MOLTIS_CONFIG_DIR`   | `/data/moltis-config`             | Gateway config directory                 |
 | `MOLTIS_DATA_DIR`     | `/data/moltis-data`               | App data directory                       |
@@ -33,21 +30,8 @@ A production-ready Docker image for running **Moltis** on ClawCloud with root ac
 
 ---
 
-## Log Levels
 
-| Level   | Use case                                          |
-|---------|---------------------------------------------------|
-| `error` | Unrecoverable issues only                        |
-| `warn`  | Unexpected but recoverable events                |
-| `info`  | Normal operational milestones (default)          |
-| `debug` | Detailed diagnostics for troubleshooting          |
-| `trace` | Very verbose per-item logging                     |
-
-> **Recommended for production:** `info` — keeps logs clean. Use `debug` only when debugging issues.
-
----
-
-## Volumes
+## Volume - /data
 
 | Path                 | Purpose                              |
 |----------------------|--------------------------------------|
@@ -62,49 +46,15 @@ A production-ready Docker image for running **Moltis** on ClawCloud with root ac
 ## Installed Tools
 
 - **Node.js 24 LTS**
-- **pnpm** via corepack
 - **uv** Python package manager
-- **mcporter** — Zo Computer MCP server CLI
 - **curl, jq, ripgrep, fzf, rsync, gh, sudo, tmux, vim, ca-certificates**
 
 ---
 
-## Zo Computer MCP Integration
-
-At startup, `init.sh` auto-generates `/data/moltis-config/moltis.toml` with the Zo Computer MCP server configured:
-
-```toml
-[mcp]
-request_timeout_secs = 30
-
-[mcp.servers.zo]
-transport = "sse"
-url = "https://api.zo.computer/mcp"
-```
-
-Set your Zo API token at runtime:
-
-```bash
-docker run -d ... \
-  -e ZO_API_TOKEN=your_zo_token_here \
-  meshpotato/moltis:latest
-```
-
----
 
 ## Build & Push
 
 Every push to `main` triggers GitHub Actions which builds and pushes the image to Docker Hub as `meshtapotato/moltis:latest` (linux/amd64 + linux/arm64).
-
----
-
-## SSH Access
-
-Moltis has a built-in SSH server on port `1455`. Authenticate with your `MOLTIS_PASSWORD`:
-
-```bash
-ssh -p 1455 user@your-host
-```
 
 ---
 
