@@ -70,9 +70,9 @@ ENV MOLTIS_PASSWORD=Change_your_Password_Before_Use
 # SSH is built into moltis gateway on port 1455
 EXPOSE 13131 13132 1455
 
-COPY init.sh /data/init.sh
-RUN chmod +x /data/init.sh
+COPY init.sh /init.sh
+RUN chmod +x /init.sh
 
-ENTRYPOINT ["/data/init.sh"]
+ENTRYPOINT ["/init.sh"]
 # Port and bind set via env vars, not CLI — per cloud-deploy docs
 CMD []
