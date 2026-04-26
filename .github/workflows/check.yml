@@ -1,16 +1,9 @@
-name: Moltis Auto Sync & Build
+name: Check Upstream Moltis
 
 on:
   schedule:
     - cron: "0 8,20 * * *"
   workflow_dispatch:
-    inputs:
-      force_build:
-        description: "Force rebuild even if no change"
-        required: false
-        default: "false"
-  repository_dispatch:
-    types: [check-upstream]
 
 permissions:
   contents: write
@@ -18,16 +11,12 @@ permissions:
 jobs:
   check-upstream:
     runs-on: ubuntu-latest
-    outputs:
-      needs_build: ${{ steps.check.outputs.needs_build }}
-      new_digest: ${{ steps.check.outputs.new_digest }}
-      old_digest: ${{ steps.check.outputs.old_digest }}
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Get upstream digest (robust)
+      - name: Get upstream digest
         id: check
         run: |
           set -euo pipefail
@@ -44,9 +33,8 @@ jobs:
             | awk '{print $2}' \
             || true)
 
-          # Fallback if header missing
           if [ -z "$NEW_DIGEST" ]; then
-            echo "⚠️ Header method failed, trying fallback..."
+            echo "⚠️ Header method failed, using fallback..."
 
             NEW_DIGEST=$(curl -s \
               -H "Accept: application/vnd.oci.image.index.v1+json" \
@@ -57,94 +45,46 @@ jobs:
 
           if [ -z "$NEW_DIGEST" ]; then
             echo "❌ Failed to fetch digest"
-            echo "needs_build=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          echo "✅ New digest: $NEW_DIGEST"
+          echo "NEW_DIGEST=$NEW_DIGEST" >> $GITHUB_ENV
 
-          OLD_DIGEST=$(git log --all --oneline --grep="upstream_digest:" -1 2>/dev/null \
-            | grep -oP "upstream_digest:\s*\K[a-f0-9:]+" || echo "")
+          OLD_DIGEST=$(cat .upstream_digest 2>/dev/null || echo "")
+          echo "OLD_DIGEST=$OLD_DIGEST" >> $GITHUB_ENV
 
-          echo "📦 Cached digest: ${OLD_DIGEST:-<none>}"
+          echo "New: $NEW_DIGEST"
+          echo "Old: ${OLD_DIGEST:-<none>}"
 
-          echo "new_digest=$NEW_DIGEST" >> $GITHUB_OUTPUT
-          echo "old_digest=$OLD_DIGEST" >> $GITHUB_OUTPUT
-
-          FORCE="${{ github.event.inputs.force_build || 'false' }}"
-
-          if [ "$FORCE" = "true" ]; then
-            echo "⚡ Force build requested"
-            echo "needs_build=true" >> $GITHUB_OUTPUT
-          elif [ "$OLD_DIGEST" = "$NEW_DIGEST" ]; then
-            echo "🟢 No change"
-            echo "needs_build=false" >> $GITHUB_OUTPUT
+          if [ "$OLD_DIGEST" = "$NEW_DIGEST" ]; then
+            echo "No change detected."
+            echo "changed=false" >> $GITHUB_ENV
           else
-            echo "🆕 Change detected"
-            echo "needs_build=true" >> $GITHUB_OUTPUT
+            echo "Change detected!"
+            echo "changed=true" >> $GITHUB_ENV
           fi
 
-  build:
-    needs: check-upstream
-    if: needs.check-upstream.outputs.needs_build == 'true'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v6
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Prepare tags
-        id: vars
+      - name: Trigger docker.yml
+        if: env.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          DIGEST="${{ needs.check-upstream.outputs.new_digest }}"
-          SHORT=$(echo "$DIGEST" | cut -c8-19)
-          DATE=$(date -u +%Y%m%d)
+          echo "Triggering docker workflow..."
 
-          echo "short_sha=$SHORT" >> $GITHUB_OUTPUT
-          echo "date_tag=$DATE" >> $GITHUB_OUTPUT
+          curl -s -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
+            -d '{"event_type":"check-upstream"}'
 
-      - name: Build and push multi-arch image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            meshpotato/moltis:latest
-            meshpotato/moltis:sha-${{ steps.vars.outputs.short_sha }}
-            meshpotato/moltis:${{ steps.vars.outputs.date_tag }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          provenance: false
-
-      - name: Record digest (commit state)
+      - name: Record digest
+        if: env.changed == 'true'
         run: |
+          echo "$NEW_DIGEST" > .upstream_digest
+
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          DIGEST="${{ needs.check-upstream.outputs.new_digest }}"
-
-          printf "ci: sync upstream image\nupstream_digest: %s\n" "$DIGEST" > /tmp/msg.txt
-
-          git commit --allow-empty -F /tmp/msg.txt
+          git add .upstream_digest
+          git commit -m "ci: update upstream digest $NEW_DIGEST" || echo "No changes to commit"
           git push
-
-      - name: Build summary
-        run: |
-          echo "## ✅ Moltis Sync Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Old Digest: ${{ needs.check-upstream.outputs.old_digest }}" >> $GITHUB_STEP_SUMMARY
-          echo "- New Digest: ${{ needs.check-upstream.outputs.new_digest }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Tags pushed:" >> $GITHUB_STEP_SUMMARY
-          echo "  - latest" >> $GITHUB_STEP_SUMMARY
-          echo "  - sha-${{ steps.vars.outputs.short_sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "  - ${{ steps.vars.outputs.date_tag }}" >> $GITHUB_STEP_SUMMARY
