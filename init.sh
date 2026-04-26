@@ -34,19 +34,19 @@ export UV_TOOL_DIR=/data/uv-tools
 # =========================
 # temp (fix npx 100MB issue)
 # =========================
-export TMPDIR=/data/tmp
+export TMPDIR=/tmp
 
 # =========================
 # PATH (priority order)
 # =========================
 export PATH="/data/npm/bin:/data/uv-tools/bin:/usr/local/bin:$PATH"
 
-# Erase temp dir 
-rm -rf /data/tmp
+# Erase $TMPDIR
+rm -rf $TMPDIR
 
 # Ensure all persistent dirs exist
 mkdir -p \
-  /data/tmp \
+  /tmp \
   /data/npm \
   /data/npm-cache \
   /data/uv-cache \
