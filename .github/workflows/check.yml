@@ -27,19 +27,33 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v6
 
-      - name: Get upstream digest (reliable)
+      - name: Get upstream digest (robust)
         id: check
         run: |
           set -euo pipefail
 
           echo "Fetching digest from GHCR..."
 
-          NEW_DIGEST=$(curl -sI \
+          HEADERS=$(curl -sI \
             -H "Accept: application/vnd.oci.image.index.v1+json" \
-            https://ghcr.io/v2/moltis-org/moltis/manifests/latest \
+            https://ghcr.io/v2/moltis-org/moltis/manifests/latest || true)
+
+          NEW_DIGEST=$(echo "$HEADERS" \
             | tr -d '\r' \
             | grep -i docker-content-digest \
-            | awk '{print $2}')
+            | awk '{print $2}' \
+            || true)
+
+          # Fallback if header missing
+          if [ -z "$NEW_DIGEST" ]; then
+            echo "⚠️ Header method failed, trying fallback..."
+
+            NEW_DIGEST=$(curl -s \
+              -H "Accept: application/vnd.oci.image.index.v1+json" \
+              https://ghcr.io/v2/moltis-org/moltis/manifests/latest \
+              | sha256sum | awk '{print "sha256:" $1}' \
+              || true)
+          fi
 
           if [ -z "$NEW_DIGEST" ]; then
             echo "❌ Failed to fetch digest"
