@@ -9,7 +9,7 @@ A production-ready Docker image for running **Moltis** on ClawCloud with root ac
 ## Ports
 
 | Port  | Service                        |
-|-------|----------|--------------------------------|
+|-------|--------------------------------|
 | `13131` | Gateway (HTTPS) — web UI, API, WebSocket           |
 | `13132` | HTTP — CA certificate download for TLS trust |
 | `1455`  | OAuth callback — required for OpenAI Codex and other providers with pre-registered redirect URIs    |
