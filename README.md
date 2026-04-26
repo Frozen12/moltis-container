@@ -20,7 +20,7 @@ A production-ready Docker image for running **Moltis** on ClawCloud with root ac
 
 | Variable              | Default                           | Description                              |
 |-----------------------|-----------------------------------|------------------------------------------|
-| `MOLTIS_PASSWORD`    | `changeme_set_your_password_here`     | Gateway admin password — **change this**    |
+| `MOLTIS_PASSWORD`    | `*****`     | Gateway admin password — **Auto Generated if not set mamually**    |
 | `MOLTIS_NO_TLS`       | `true`                            | Disable TLS                              |
 | `MOLTIS_CONFIG_DIR`   | `/data/moltis-config`             | Gateway config directory                 |
 | `MOLTIS_DATA_DIR`     | `/data/moltis-data`               | App data directory                       |
